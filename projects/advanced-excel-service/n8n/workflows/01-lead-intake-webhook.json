@@ -1,0 +1,81 @@
+{
+  "name": "Advanced Excel - Lead Intake (Test First)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "advanced-excel-lead-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "8e9f1a0b-3c1d-4a5e-9f70-123456789001",
+      "name": "Lead Intake Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "advanced-excel-lead-intake"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.body ?? $input.first().json;\\nconst required = ['name', 'email', 'requested_service'];\\nconst missing = required.filter((key) => !String(raw[key] ?? '').trim());\\nconst email = String(raw.email ?? '').trim();\\nconst validEmail = /^[^\\\\s@]+@[^\\\\s@]+\\\\.[^\\\\s@]+$/.test(email);\\nconst record = {\\n  lead_id: `AX-${Date.now()}`,\\n  name: String(raw.name ?? '').trim(),\\n  email,\\n  company: String(raw.company ?? '').trim(),\\n  requested_service: String(raw.requested_service ?? '').trim(),\\n  message: String(raw.message ?? '').trim(),\\n  source: String(raw.source ?? 'website_or_manual').trim(),\\n  received_at: new Date().toISOString(),\\n  status: 'NEW',\\n  approval_required_before_contact: true\\n};\\nconst errors = [...missing.map((key) => `Missing ${key}`)];\\nif (email && !validEmail) errors.push('Invalid email format');\\nreturn [{ json: { ok: errors.length === 0, errors, lead: record, next_step: 'Review the enquiry and record it in the lead tracker. No email is sent by this workflow.' } }];"
+      },
+      "id": "8e9f1a0b-3c1d-4a5e-9f70-123456789002",
+      "name": "Validate and Normalize Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.ok ? 200 : 400 }}"
+        }
+      },
+      "id": "8e9f1a0b-3c1d-4a5e-9f70-123456789003",
+      "name": "Return Intake Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Lead Intake Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate and Normalize Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and Normalize Lead": {
+      "main": [
+        [
+          {
+            "node": "Return Intake Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8e9f1a0b-3c1d-4a5e-9f70-123456789004"
+}
